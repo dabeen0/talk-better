@@ -533,8 +533,7 @@ function copyResultText() {
     lines.push(`• ${m}: 부담 ${formatCurrency(s.owed)} (선결제 ${formatCurrency(s.paid)})`);
   });
 
-  copyToClipboard(lines.join("
-"), "정산 내역 텍스트가 복사되었습니다!");
+  copyToClipboard(lines.join("\n"), "정산 내역 텍스트가 복사되었습니다!");
 }
 
 function copyShareLink() {
