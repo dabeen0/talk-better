@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dutch Pay Manager | 스마트 더치페이 정산</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- 상단 헤더 -->
+    <header class="app-header">
+      <div class="header-top">
+        <h1>DUTCH PAY <span class="badge">PRO</span></h1>
+        <button id="resetAllBtn" class="btn-ghost-danger" title="전체 초기화">초기화</button>
+      </div>
+      <p class="subtitle">메뉴별 차등 정산 &amp; 최소 송금 경로 계산기</p>
+    </header>
+
+    <!-- 공유 링크로 접속했을 때 표시되는 알림 배너 -->
+    <div id="sharedBanner" class="shared-banner hidden">
+      <span>🔗 공유받은 정산 결과입니다. 자유롭게 수정하거나 새로 계산할 수 있습니다.</span>
+      <button id="closeBannerBtn" class="btn-icon" aria-label="닫기">✕</button>
+    </div>
+
+    <main class="main-content">
+      <!-- 1단계: 모임 정보 & 참여자 관리 -->
+      <section class="card">
+        <div class="card-header">
+          <h2>1. 모임 및 참여자 설정</h2>
+          <span class="step-badge">STEP 1</span>
+        </div>
+
+        <div class="form-group">
+          <label for="meetingTitle">모임 이름</label>
+          <input type="text" id="meetingTitle" placeholder="예: 11월 동기 모임 / 1·2차 통합 정산" />
+        </div>
+
+        <div class="form-group">
+          <label for="accountInfo">총무 계좌번호 (선택)</label>
+          <input type="text" id="accountInfo" placeholder="예: 카카오뱅크 3333-01-1234567 (홍길동)" />
+        </div>
+
+        <div class="form-group">
+          <label>참여자 추가 <span id="memberCount" class="count-pill">0명</span></label>
+          <div class="input-row">
+            <input type="text" id="memberInput" placeholder="이름 입력 후 추가" maxlength="12" />
+            <button id="addMemberBtn" class="btn-primary">추가</button>
+          </div>
+          <div id="memberList" class="chip-container"></div>
+        </div>
+      </section>
+
+      <!-- 2단계: 결제 내역 및 개인별 메뉴 선택 -->
+      <section class="card">
+        <div class="card-header">
+          <h2>2. 결제 내역 및 메뉴별 참여자</h2>
+          <span class="step-badge">STEP 2</span>
+        </div>
+
+        <div class="expense-form">
+          <div class="grid-2">
+            <div class="form-group">
+              <label for="itemName">항목 / 메뉴명</label>
+              <input type="text" id="itemName" placeholder="예: 1차 삼겹살, 소주 3병" />
+            </div>
+            <div class="form-group">
+              <label for="itemAmount">금액 (원)</label>
+              <input type="number" id="itemAmount" inputmode="numeric" placeholder="예: 45000" min="0" step="100" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="payerSelect">결제한 사람 (선결제자)</label>
+            <select id="payerSelect">
+              <option value="">참여자를 먼저 추가하세요</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label>이 메뉴를 함께 부담할 사람</label>
+              <button type="button" id="toggleAllParticipantsBtn" class="btn-text">전체 선택/해제</button>
+            </div>
+            <div id="participantCheckboxes" class="checkbox-grid">
+              <p class="empty-hint">참여자를 등록하면 선택할 수 있습니다.</p>
+            </div>
+          </div>
+
+          <button id="addExpenseBtn" class="btn-primary full-width">+ 결제 내역 추가하기</button>
+        </div>
+
+        <!-- 등록된 결제 내역 리스트 -->
+        <div class="expense-list-wrapper">
+          <div class="list-header">
+            <h3>등록된 내역 (<span id="expenseCount">0</span>건)</h3>
+            <span class="total-amount-label">총 지출: <strong id="totalSpentDisplay">0원</strong></span>
+          </div>
+          <div id="expenseList" class="expense-list">
+            <p class="empty-state">아직 등록된 결제 내역이 없습니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3단계: 정산 결과 & 최소 송금 매칭 -->
+      <section class="card result-card">
+        <div class="card-header">
+          <h2>3. 최종 정산 결과</h2>
+          <span class="step-badge accent">RESULT</span>
+        </div>
+
+        <!-- 자투리 처리 옵션 -->
+        <div class="option-bar">
+          <label for="roundingOption">10원 미만 자투리 처리</label>
+          <select id="roundingOption">
+            <option value="exact">1원 단위 정확히 계산</option>
+            <option value="ceil10">10원 단위 올림 (차액은 최다 결제자 보전)</option>
+          </select>
+        </div>
+
+        <!-- 최소 송금 경로 안내 -->
+        <div class="result-block">
+          <h3>💸 최소 송금 안내 (송금 횟수 최적화)</h3>
+          <div id="transferList" class="transfer-list">
+            <p class="empty-state">결제 내역을 추가하면 최소 송금 경로가 자동 계산됩니다.</p>
+          </div>
+        </div>
+
+        <!-- 개인별 상세 내역 -->
+        <div class="result-block">
+          <h3>📊 개인별 지출 및 부담 상세</h3>
+          <div id="personalSummaryList" class="summary-list">
+            <p class="empty-state">참여자와 결제 내역을 입력해 주세요.</p>
+          </div>
+        </div>
+
+        <!-- 공유 버튼 영역 -->
+        <div class="share-actions">
+          <button id="copyTextBtn" class="btn-secondary">📋 카톡 공유용 텍스트 복사</button>
+          <button id="copyLinkBtn" class="btn-primary">🔗 정산 결과 링크 복사</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>Dutch Pay Manager &bull; Pure HTML/CSS/JS Serverless Web App</p>
+    </footer>
+  </div>
+
+  <!-- 토스트 알림 -->
+  <div id="toast" class="toast">복사되었습니다!</div>
+
+  <script src="app.js"></script>
+</body>
+</html>
